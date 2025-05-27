@@ -1,0 +1,1 @@
+export { searchInstagramProfile, searchInstagramHashtag } from './instagram/index';
