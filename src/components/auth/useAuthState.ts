@@ -14,6 +14,10 @@ export function useAuthState() {
 
     const initAuth = async () => {
       try {
+        if (!supabase) {
+          throw new AuthenticationError('Supabase client not configured');
+        }
+
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) throw new AuthenticationError(sessionError.message);
@@ -37,30 +41,40 @@ export function useAuthState() {
 
     initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!mounted) return;
-      
-      try {
-        if (session?.user) {
-          setUser(session.user);
-          setError(null);
-        } else {
+    if (supabase) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        if (!mounted) return;
+        
+        try {
+          if (session?.user) {
+            setUser(session.user);
+            setError(null);
+          } else {
+            setUser(null);
+          }
+        } catch (err) {
+          console.error('Auth state change error:', err);
           setUser(null);
+          setError(err instanceof AuthenticationError ? err : new AuthenticationError(AUTH_ERRORS.NO_USER));
         }
-      } catch (err) {
-        console.error('Auth state change error:', err);
-        setUser(null);
-        setError(err instanceof AuthenticationError ? err : new AuthenticationError(AUTH_ERRORS.NO_USER));
-      }
-    });
+      });
+
+      return () => {
+        mounted = false;
+        subscription.unsubscribe();
+      };
+    }
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
     };
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    if (!supabase) {
+      throw new AuthenticationError('Supabase client not configured');
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -76,6 +90,10 @@ export function useAuthState() {
   };
 
   const signUp = async (email: string, password: string) => {
+    if (!supabase) {
+      throw new AuthenticationError('Supabase client not configured');
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -96,6 +114,10 @@ export function useAuthState() {
   };
 
   const signOut = async () => {
+    if (!supabase) {
+      throw new AuthenticationError('Supabase client not configured');
+    }
+
     try {
       setLoading(true);
       const { error } = await supabase.auth.signOut();
